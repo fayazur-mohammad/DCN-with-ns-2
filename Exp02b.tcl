@@ -1,0 +1,60 @@
+set ns [new Simulator]
+
+$ns color 1 Red
+$ns color 2 Blue
+$ns color 3 Green
+
+set tracefile [open Exp02b.tr w]
+$ns trace-all $tracefile
+
+set namfile [open Exp02b.nam w]
+$ns namtrace-all $namfile
+
+set n0 [$ns node]
+set n1 [$ns node]
+
+$ns duplex-link $n0 $n1 3Mb 10ms DropTail
+$ns duplex-link-op $n0 $n1 queuePos 0.5
+
+set udp0 [new Agent/UDP]
+$ns attach-agent $n0 $udp0
+
+$udp0 set fid_ 1
+
+set cbr0 [new Application/Traffic/CBR]
+$cbr0 attach-agent $udp0
+
+set null0 [new Agent/Null]
+$ns attach-agent $n1 $null0
+$ns connect $udp0 $null0
+
+set tcp0 [new Agent/TCP]
+$ns attach-agent $n0 $tcp0
+$tcp0 set fid_ 2
+$tcp0 set window_ 500
+
+set ftp0 [new Application/FTP]
+$ftp0 attach-agent $tcp0
+$ftp0 set rate_ 4Mb
+
+set sink0 [new Agent/TCPSink]
+$ns attach-agent $n1 $sink0
+
+$ns connect $tcp0 $sink0
+
+proc finish {} {
+	global ns tracefile namfile
+	$ns flush-trace
+	close $tracefile
+	close $namfile
+	exit 0
+}
+
+$ns at 1.0 "$cbr0 start"
+$ns at 8.0 "$cbr0 stop"
+
+$ns at 1.5 "$ftp0 start"
+$ns at 8.5 "$ftp0 stop"
+
+$ns at 10.0 "finish"
+$ns run
